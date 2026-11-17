@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "sha256": {
+    "inventory": "d8de7a7d726152b929c059bd88f61422ee381cf57d4b946356797c3464e6c960",
+    "replacements": "53b2b0fe231c01947cca032082c69c463a1d455d9178895ade070e4eae36281d",
+    "before": "a41840872d34a208e9d1084d8d9c9b62d7c4a9f65bbf2362fc8dda93b8caede1",
+    "after": "6726fc66ba71848e47afe2a018fbadfaa4da8112dc2823ba748a9a61008d6102"
+  },
+  "slots": [
+    {
+      "slot": "embedding",
+      "before_ref": "old-embedding",
+      "after_ref": "new-embedding"
+    },
+    {
+      "slot": "index",
+      "before_ref": "old-index",
+      "after_ref": "new-index"
+    },
+    {
+      "slot": "answer-service",
+      "before_ref": "old-answer-service",
+      "after_ref": "new-answer-service"
+    },
+    {
+      "slot": "ui",
+      "before_ref": "old-ui",
+      "after_ref": "new-ui"
+    }
+  ]
+}

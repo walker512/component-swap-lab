@@ -1,0 +1,102 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "bom-ref": "new-app",
+      "name": "Synthetic consumer outside native mapping"
+    }
+  },
+  "components": [
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "new-embedding",
+      "name": "Synthetic embedding",
+      "version": "synthetic-v2",
+      "licenses": [
+        {
+          "expression": "MIT",
+          "acknowledgement": "declared"
+        }
+      ],
+      "modelCard": {},
+      "components": [
+        {
+          "type": "data",
+          "bom-ref": "new-training-data",
+          "name": "Synthetic dataset record",
+          "data": [
+            {
+              "type": "dataset",
+              "name": "Synthetic data; no actual samples"
+            }
+          ],
+          "licenses": [
+            {
+              "license": {
+                "name": "Synthetic terms for review only"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "new-index",
+      "name": "Synthetic index",
+      "version": "synthetic-v1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "new-answer-service",
+      "name": "Synthetic answer-service",
+      "version": "synthetic-v1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "new-ui",
+      "name": "Synthetic ui",
+      "version": "synthetic-v1"
+    }
+  ],
+  "services": [
+    {
+      "bom-ref": "remote-service",
+      "name": "Unprojected synthetic service"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "new-embedding",
+      "dependsOn": []
+    },
+    {
+      "ref": "new-index",
+      "dependsOn": [
+        "new-embedding"
+      ]
+    },
+    {
+      "ref": "new-answer-service",
+      "dependsOn": [
+        "new-index",
+        "remote-service"
+      ]
+    },
+    {
+      "ref": "new-ui",
+      "dependsOn": [
+        "new-answer-service"
+      ]
+    },
+    {
+      "ref": "new-app",
+      "dependsOn": [
+        "new-ui"
+      ]
+    }
+  ]
+}
