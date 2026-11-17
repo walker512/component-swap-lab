@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 [project]
 name = "component-swap-lab"
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.11"
 description = "Offline declared-component replacement constraints and impact review"
 license = "MIT"
@@ -11,5 +11,6 @@ authors = [{name = "walker512"}]
 dependencies = []
 [project.scripts]
 component-swap = "component_swap.__main__:main"
+component-contract = "component_swap.contracts:main"
 [tool.setuptools.packages.find]
 include = ["component_swap*"]

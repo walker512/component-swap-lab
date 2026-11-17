@@ -4,7 +4,7 @@
 
 A new offline inventory-and-replacement workbench by **walker512**. Give it explicitly declared components, dependency constraints and replacement candidates. It compares the old and proposed constraints, identifies mismatches and missing declarations, and lists reverse-dependency impact in a reproducible review bundle.
 
-**It does not execute deployment, inspect real APIs, authenticate evidence or certify compatibility.** All inputs are user declarations. A `declared_match` must never be read as “safe to deploy.” Manual review is always required.
+**The default planning workflow does not execute deployment, inspect real APIs, authenticate evidence or certify compatibility.** Planning inputs are user declarations. The optional trusted-adapter workflow below separately tests explicit behavior contracts. A `declared_match` must never be read as “safe to deploy.” Manual review is always required.
 
 ## Try three outcomes
 
@@ -50,7 +50,7 @@ Exit 0 means planning or bundle consistency verification completed, even when th
 
 A bundle contains **complete supplied inventories**, including IDs, versions, facts and requirements. These may expose internal infrastructure or sensitive values. It is not anonymized, encrypted or automatically redacted. Never put API keys, passwords, customer prompts or private records into a public example. The supplied fixtures contain only fictional component names and capabilities.
 
-`verify` recomputes from bundled inputs and compares deterministic report bytes. It does not check the live system or authenticated external evidence. A person who changes both inputs and generated outputs can create another internally consistent bundle. Hashes are not signatures, truth or freshness checks. There is no network access, model call, executable evaluator, source-code scanning or telemetry in this tool.
+`verify` recomputes from bundled inputs and compares deterministic report bytes. It does not check the live system or authenticated external evidence. A person who changes both inputs and generated outputs can create another internally consistent bundle. Hashes are not signatures, truth or freshness checks. The planning and BOM workflows make no network/model calls and execute no evaluators. The optional contract runner executes explicitly trusted Python adapters; it is not a sandbox and cannot restrict what that code accesses.
 
 ## Existing alternatives and bounded value
 
@@ -78,3 +78,16 @@ python -m component_swap.bom_review verify bom-review
 ```
 
 Increment validation: 30 new synthetic BOM regression tests plus the unchanged 27 native tests, **57 passed on Linux/Python 3.12, zero skips**. Coverage includes explicit identities and ref renaming, unknown graph coverage versus declared empty, assembly separation, raw license expressions, unmapped reverse impact, exact five-file binding, finite floats versus nonfinite rejection, field coverage, cycles, file limits, output preflight, real CLI and every bundled file's tamper detection. Windows/macOS, browser acceptance, deployed systems and competitor runtimes were not tested.
+
+## Observed replacement contracts (0.3.0 candidate)
+
+[Behavior contracts](docs/BEHAVIOR_CONTRACTS.md) add actual baseline/candidate execution, independent expected outputs, timeout/protocol diagnostics and verifiable evidence bound to a changed component slot. The shipped adapters perform real JSON-file and SQLite operations on synthetic data, without APIs. This is a core runtime check, not another inventory declaration.
+
+```sh
+python -m component_swap.contracts run examples/contracts/inventory.json examples/contracts/replacement.json examples/contracts/contract.json examples/contracts/json_store.py examples/contracts/sqlite_store.py --out store-contract-review --trust-adapters
+python -m component_swap.contracts verify store-contract-review
+```
+
+Only run reviewed trusted code. A fresh process and working directory are **not a security sandbox**. Do not spawn child/background processes. Cases and adapter outputs are private until reviewed. Incomplete baseline execution cannot yield a successful comparison; identical wrong outputs cannot pass an independent expected result. No deployment, real data migration, universal compatibility or superiority claim.
+
+This candidate was rebuilt from public 0.2.0 commit `33974c48876bf31681d7c453811318dcb76d0186`; it is not a recovery or reproduction of a previous unpublished candidate. The [independent audit](docs/CONTRACT_AUDIT.md) records 83/83 Linux Python 3.12 tests, zero skips, six additional process probes, and a fresh-wheel install outside the source tree. Three real JSON/SQLite cases passed for both implementations. Windows/macOS, GUI and remote CI remain unverified.
