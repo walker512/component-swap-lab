@@ -60,10 +60,21 @@ This project packages a multi-component declared-constraint comparison, before/a
 
 ## Verification status
 
-27 public synthetic regression tests cover baseline/proposed changes, typed scalar distinctions, unknowns, removals, cycles, graph references, bounds, Markdown escaping, tampering, fixed output bytes and CLI plan/verify. Boundary fixtures cover 500 constraints per graph, disjoint before/after keys yielding 1,000 report rows, and sixfold Markdown escaping of `<`, `>` and backticks. Both report files are serialized and size-checked before the output directory is created; oversized reports are rejected rather than producing an unverifiable bundle. Verification uses the same separate report limit. Tests are local Linux Python 3.12; Windows/macOS have not been executed. FIFO and symlink cases can skip on unsupported platforms; skips are not passes.
+The unchanged native model has 27 public synthetic regression tests covering baseline/proposed changes, typed scalar distinctions, unknowns, removals, cycles, graph references, bounds, Markdown escaping, tampering, fixed output bytes and CLI plan/verify. Boundary fixtures cover 500 constraints per graph, disjoint before/after keys yielding 1,000 report rows, and sixfold Markdown escaping of `<`, `>` and backticks. Both report files are serialized and size-checked before the output directory is created; oversized reports are rejected rather than producing an unverifiable bundle. Verification uses the same separate report limit. Tests are local Linux Python 3.12; Windows/macOS have not been executed. FIFO and symlink cases can skip on unsupported platforms; skips are not passes.
 
 This is a CLI with a text/Markdown review, not an interactive UI. No browser acceptance or real service migration is claimed. Independent audit is required before publication.
 
 ## License
 
 MIT, copyright 2026 walker512. Original code and synthetic fixtures; no competitor code, real provider logs or private data are included.
+
+## Optional CycloneDX replacement evidence (0.2.0)
+
+The [BOM review workflow](docs/BOM_REVIEW.md) binds CycloneDX JSON 1.6/1.7 evidence and explicit human slot mappings to the original inventory and replacement proposal. It adds declared graph changes/unknown coverage, reverse impact including unmapped consumers, complete license-array preservation and model/data presence evidence. It never invents compatibility constraints from dependency edges or treats license expressions as legal conclusions. This is a bounded projection, not full standard validation or complete coverage of model/data licensing.
+
+```sh
+python -m component_swap.bom_review plan examples/inventory.json examples/declared-match.json examples/before-bom.json examples/after-bom.json examples/bom-mapping.json --out bom-review
+python -m component_swap.bom_review verify bom-review
+```
+
+Increment validation: 30 new synthetic BOM regression tests plus the unchanged 27 native tests, **57 passed on Linux/Python 3.12, zero skips**. Coverage includes explicit identities and ref renaming, unknown graph coverage versus declared empty, assembly separation, raw license expressions, unmapped reverse impact, exact five-file binding, finite floats versus nonfinite rejection, field coverage, cycles, file limits, output preflight, real CLI and every bundled file's tamper detection. Windows/macOS, browser acceptance, deployed systems and competitor runtimes were not tested.
