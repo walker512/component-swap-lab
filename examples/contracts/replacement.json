@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "replacements": [
+    {
+      "id": "store",
+      "kind": "other",
+      "version": "sqlite-v1",
+      "facts": {
+        "format": "json",
+        "backend": "sqlite"
+      },
+      "requires": []
+    }
+  ]
+}
