@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "components": [
+    {
+      "id": "store",
+      "kind": "other",
+      "version": "json-v1",
+      "facts": {
+        "format": "json",
+        "backend": "file"
+      },
+      "requires": []
+    },
+    {
+      "id": "client",
+      "kind": "client",
+      "version": "v1",
+      "facts": {},
+      "requires": [
+        {
+          "provider": "store",
+          "constraints": {
+            "format": "json"
+          }
+        }
+      ]
+    }
+  ]
+}

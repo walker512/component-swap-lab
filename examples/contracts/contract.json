@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "slot": "store",
+  "timeout_ms": 2000,
+  "cases": [
+    {
+      "id": "missing",
+      "input": {
+        "operations": [
+          {
+            "op": "get",
+            "key": "missing"
+          }
+        ]
+      },
+      "expected": [
+        null
+      ]
+    },
+    {
+      "id": "typed-overwrite",
+      "input": {
+        "operations": [
+          {
+            "op": "put",
+            "key": "x",
+            "value": true
+          },
+          {
+            "op": "get",
+            "key": "x"
+          },
+          {
+            "op": "put",
+            "key": "x",
+            "value": 1
+          },
+          {
+            "op": "get",
+            "key": "x"
+          }
+        ]
+      },
+      "expected": [
+        null,
+        true,
+        null,
+        1
+      ]
+    },
+    {
+      "id": "unicode-order",
+      "input": {
+        "operations": [
+          {
+            "op": "put",
+            "key": "雪",
+            "value": {
+              "x": [
+                null,
+                false,
+                "你好"
+              ]
+            }
+          },
+          {
+            "op": "put",
+            "key": "a",
+            "value": 0
+          },
+          {
+            "op": "keys"
+          },
+          {
+            "op": "get",
+            "key": "雪"
+          }
+        ]
+      },
+      "expected": [
+        null,
+        null,
+        [
+          "a",
+          "雪"
+        ],
+        {
+          "x": [
+            null,
+            false,
+            "你好"
+          ]
+        }
+      ]
+    }
+  ]
+}
