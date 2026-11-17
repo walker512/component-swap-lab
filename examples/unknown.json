@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "replacements": [
+    {
+      "id": "embedding",
+      "kind": "embedding",
+      "version": "synthetic-v2",
+      "facts": {
+        "api": "embeddings-v1"
+      },
+      "requires": []
+    }
+  ]
+}

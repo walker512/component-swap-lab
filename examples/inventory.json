@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "components": [
+    {
+      "id": "embedding",
+      "kind": "embedding",
+      "version": "synthetic-v1",
+      "facts": {
+        "vector.dimension": 1536,
+        "api": "embeddings-v1"
+      },
+      "requires": []
+    },
+    {
+      "id": "index",
+      "kind": "vector-store",
+      "version": "synthetic-v1",
+      "facts": {
+        "search": true
+      },
+      "requires": [
+        {
+          "provider": "embedding",
+          "constraints": {
+            "vector.dimension": 1536,
+            "api": "embeddings-v1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "answer-service",
+      "kind": "orchestrator",
+      "version": "synthetic-v1",
+      "facts": {
+        "json.output": true
+      },
+      "requires": [
+        {
+          "provider": "index",
+          "constraints": {
+            "search": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "ui",
+      "kind": "client",
+      "version": "synthetic-v1",
+      "facts": {},
+      "requires": [
+        {
+          "provider": "answer-service",
+          "constraints": {
+            "json.output": true
+          }
+        }
+      ]
+    }
+  ]
+}
