@@ -91,3 +91,34 @@ python -m component_swap.contracts verify store-contract-review
 Only run reviewed trusted code. A fresh process and working directory are **not a security sandbox**. Do not spawn child/background processes. Cases and adapter outputs are private until reviewed. Incomplete baseline execution cannot yield a successful comparison; identical wrong outputs cannot pass an independent expected result. No deployment, real data migration, universal compatibility or superiority claim.
 
 This candidate was rebuilt from public 0.2.0 commit `33974c48876bf31681d7c453811318dcb76d0186`; it is not a recovery or reproduction of a previous unpublished candidate. The [independent audit](docs/CONTRACT_AUDIT.md) records 83/83 Linux Python 3.12 tests, zero skips, six additional process probes, and a fresh-wheel install outside the source tree. Three real JSON/SQLite cases passed for both implementations. Windows/macOS, GUI and remote CI remain unverified.
+
+
+## 0.3.1: private bundles and trusted-adapter cancellation
+
+Native planning, BOM review and contract evidence now create POSIX directories
+with mode 0700 and files with mode 0600, including under umask 022/000. File
+creation is exclusive; existing files and leaf symlinks are not overwritten.
+Older bundle permissions are not automatically repaired. Inputs, source code and
+observations may still contain private data: review before sharing. This is not
+anonymization, a Windows ACL guarantee, or protection against the same OS user,
+privileged administrators or hostile parent-directory replacement.
+
+Contract execution now temporarily handles SIGINT/SIGTERM on the main thread.
+Cancellation cleans up the direct child and temporary directory; on POSIX it
+also terminates the child's process group. POSIX adapters run in a new session
+with umask 077 without changing the parent's umask. Cancellation during process
+creation, thread startup and result assembly is propagated, not reported as
+success. CLI cancellation exits with 128 + signal number. Previous signal
+handlers are restored; threaded callers are refused before adapter execution.
+
+This remains trusted arbitrary code, not a sandbox or rollback. SIGKILL, power
+loss, uninterruptible OS calls, cleanup failures and descendants that escape the
+process group are not covered. Windows direct-child cleanup remains a best-effort
+code path without validation in this release; it does not provide process-tree
+or ACL guarantees. Cancellation outside active execution uses normal caller
+signal behavior. A disk failure can leave a private incomplete bundle; offline
+verification must succeed before treating it as complete.
+
+Regression command: `python -m unittest discover -s tests -v`. Added tests run
+synthetic local processes, permissions, cancel races and failure injection;
+no model or external service is called.
