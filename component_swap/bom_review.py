@@ -194,8 +194,8 @@ def generated(sources,mapping):
     return files,report
 
 def build(paths,mapping,out):
-    files,report=generated({k:core.read(v) for k,v in paths.items()},core.read(mapping));root=Path(out);root.mkdir(exist_ok=False)
-    for name,data in files.items():(root/name).write_bytes(data)
+    files,report=generated({k:core.read(v) for k,v in paths.items()},core.read(mapping));root=Path(out);root.mkdir(mode=0o700,exist_ok=False)
+    for name,data in files.items():core.private_write(root/name,data)
     return report
 
 def verify(folder):

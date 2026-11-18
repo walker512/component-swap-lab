@@ -6,13 +6,15 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import tempfile
 import threading
 import time
 
-from .core import Invalid, canonical, identifier, parse, plan, read
+from .core import Invalid, canonical, identifier, parse, plan, read, private_write
+from .lifecycle import cancellation, Cancelled
 
 OUTPUT_LIMIT = 16384
 SCRIPT_LIMIT = 131072
@@ -51,40 +53,41 @@ def contract(raw, planning):
 
 
 def execute(script, request, timeout_ms):
-    """One process per case, no shell, no inherited cwd/import path or env secrets.
-    Trusted code still has the caller's OS privileges. Children are unsupported.
-    """
+    """Trusted code only. POSIX group cleanup is not sandbox isolation."""
+    with cancellation() as state:
+        return _execute(script, request, timeout_ms, state)
+
+
+def _execute(script, request, timeout_ms, state):
     with tempfile.TemporaryDirectory(prefix='component-contract-') as folder:
         script_path = Path(folder) / 'adapter.py'
-        script_path.write_bytes(script)
-        # -I ignores PYTHONPATH and user-site; do not forward user API credentials.
+        private_write(script_path, script)
         env = {k: os.environ[k] for k in ('SYSTEMROOT', 'WINDIR', 'PATH', 'TEMP', 'TMP') if k in os.environ}
         env['PYTHONIOENCODING'] = 'utf-8'
         started = time.monotonic()
-        try:
-            proc = subprocess.Popen([sys.executable, '-I', '-X', 'utf8', str(script_path)], cwd=folder,
-                                    env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-        except OSError:
-            return {'execution': 'launch_error', 'returncode': None, 'stdout': '',
-                    'stderr_sha256': digest(b''), 'stderr_bytes': 0, 'duration_ms': 0}
+        proc = None
+        threads = []
         data = {'stdout': bytearray(), 'stderr': bytearray()}
         exceeded = threading.Event()
+
+        def stop():
+            if proc is not None:
+                try:
+                    if os.name == 'posix': os.killpg(proc.pid, signal.SIGKILL)
+                    else: proc.kill()
+                except ProcessLookupError:
+                    pass
 
         def collect(name, stream):
             try:
                 while True:
                     chunk = stream.read(4096)
-                    if not chunk:
-                        break
+                    if not chunk: break
                     remaining = OUTPUT_LIMIT - len(data[name])
                     data[name].extend(chunk[:remaining])
                     if len(chunk) > remaining:
                         exceeded.set()
-                        try:
-                            proc.kill()
-                        except OSError:
-                            pass
+                        stop()
                         break
             finally:
                 stream.close()
@@ -92,34 +95,66 @@ def execute(script, request, timeout_ms):
         def feed():
             try:
                 proc.stdin.write(canonical(request))
-                proc.stdin.close()
             except (OSError, ValueError):
                 pass
+            finally:
+                try: proc.stdin.close()
+                except OSError: pass
 
-        readers = [threading.Thread(target=collect, args=(name, getattr(proc, name)), daemon=True)
-                   for name in ('stdout', 'stderr')]
-        for thread in readers:
-            thread.start()
-        writer = threading.Thread(target=feed, daemon=True)
-        writer.start()
-        execution = 'completed'
+        def start_thread(thread):
+            state['spawning'] = True
+            try:
+                thread.start()
+                threads.append(thread)
+            finally:
+                state['spawning'] = False
+            if state['signal'] is not None:
+                state['cleaning'] = True
+                raise Cancelled(state['signal'])
+
+        execution = 'completed' 
         try:
-            proc.wait(timeout=timeout_ms / 1000)
-        except subprocess.TimeoutExpired:
-            execution = 'timeout'
-            proc.kill()
-            proc.wait()
-        for thread in readers + [writer]:
-            thread.join(timeout=0.25)
-        if any(thread.is_alive() for thread in readers + [writer]):
-            execution = 'open_streams'
-        elif exceeded.is_set():
-            execution = 'output_limit'
-        raw = bytes(data['stdout'])
-        # Preserve arbitrary output exactly without trusting UTF-8 or JSON.
+            state['spawning'] = True
+            try:
+                options = {'start_new_session': True, 'umask': 0o077} if os.name == 'posix' else {}
+                proc = subprocess.Popen([sys.executable, '-I', '-X', 'utf8', str(script_path)], cwd=folder,
+                                        env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE, **options)
+            except OSError:
+                execution = 'launch_error'
+            finally:
+                state['spawning'] = False
+            if state['signal'] is not None:
+                state['cleaning'] = True
+                raise Cancelled(state['signal'])
+            if proc is not None:
+                for name in ('stdout', 'stderr'):
+                    thread = threading.Thread(target=collect, args=(name, getattr(proc, name)), daemon=True)
+                    start_thread(thread)
+                writer = threading.Thread(target=feed, daemon=True)
+                start_thread(writer)
+                try:
+                    proc.wait(timeout=timeout_ms / 1000)
+                except subprocess.TimeoutExpired:
+                    execution = 'timeout'
+        finally:
+            state['cleaning'] = True
+            stop()
+            if proc is not None:
+                proc.wait(timeout=2)
+                for thread in threads: thread.join(timeout=0.25)
+                # Close unowned streams if cancellation preceded thread setup.
+                # Threads own streams in stdout, stderr, stdin order.
+                for stream in (proc.stdout, proc.stderr, proc.stdin)[len(threads):]: stream.close()
+        state['cleaning'] = False
+        if state['signal'] is not None:
+            state['cleaning'] = True
+            raise Cancelled(state['signal'])
+        if any(thread.is_alive() for thread in threads): execution = 'open_streams'
+        elif exceeded.is_set(): execution = 'output_limit'
         import base64
-        return {'execution': execution, 'returncode': proc.returncode,
-                'stdout': base64.b64encode(raw).decode('ascii'),
+        return {'execution': execution, 'returncode': proc.returncode if proc else None,
+                'stdout': base64.b64encode(bytes(data['stdout'])).decode('ascii'),
                 'stderr_sha256': digest(bytes(data['stderr'])), 'stderr_bytes': len(data['stderr']),
                 'duration_ms': int((time.monotonic() - started) * 1000)}
 
@@ -225,9 +260,9 @@ def run(inventory, replacements, contract_path, baseline, candidate, out, truste
                                      'record': execute(raws[adapter + '.py'], case['input'], spec['timeout_ms'])})
     report = summarize(raws, evidence)
     outputs = {**raws, 'observations.json': canonical(evidence), 'report.json': canonical(report), 'review.md': review(report)}
-    root.mkdir(exist_ok=False)
+    root.mkdir(mode=0o700,exist_ok=False)
     for name, raw in outputs.items():
-        (root / name).write_bytes(raw)
+        private_write(root / name, raw)
     return report
 
 
@@ -269,6 +304,8 @@ def main():
         if not report['comparison_complete']:
             return 2
         return 0 if report.get('candidate_all_passed') else 1
+    except Cancelled as e:
+        return 128 + e.signum
     except (Invalid, OSError, TypeError, ValueError, RecursionError):
         print('Contract input, execution or bundle validation failed; private values are not echoed.', file=sys.stderr)
         return 2

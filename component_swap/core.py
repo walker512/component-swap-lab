@@ -144,6 +144,10 @@ def markdown(report):
     # JSON code blocks are escaped to prevent attacker-controlled fence closures.
     safe=json.dumps(report,ensure_ascii=False,indent=2).replace('`','\\u0060').replace('<','\\u003c').replace('>','\\u003e')
     return ('# Component Swap Lab review\n\nDeclared constraints only. No deployment or observed compatibility certification.\n\nBaseline: '+report['baseline_status']+'\n\nProposed: '+report['proposed_status']+'\n\nManual review is always required. Compare before/after rows; a pre-existing mismatch is not automatically caused by this proposal.\n\n```json\n'+safe+'\n```\n').encode('utf8')
+def private_write(path, data):
+    with open(path, 'xb', opener=lambda p, flags: os.open(p, flags, 0o600)) as f:
+        f.write(data)
+
 def build(inventory,replacements,out):
     raws=[read(inventory),read(replacements)];report=plan(*raws)
     # Serialize and bound every output before creating the destination.
@@ -151,8 +155,8 @@ def build(inventory,replacements,out):
     outputs.update({'report.json':canonical(report),'review.md':markdown(report)})
     if any(len(outputs[name])>REPORT_LIMIT for name in ('report.json','review.md')):
         raise Invalid('Generated report size limit exceeded.')
-    path=Path(out);path.mkdir(exist_ok=False)
-    for name,data in outputs.items():(path/name).write_bytes(data)
+    path=Path(out);path.mkdir(mode=0o700,exist_ok=False)
+    for name,data in outputs.items():private_write(path/name,data)
     return report
 
 def verify(folder):
